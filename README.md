@@ -1,8 +1,6 @@
-# 💬 Chatbot template
+# � Workout Coach Chatbot
 
-A simple Streamlit app that shows how to build a chatbot using OpenAI's GPT-3.5.
-
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://chatbot-template.streamlit.app/)
+A Streamlit app that turns a simple chatbot into a workout-focused coaching assistant with stronger fitness guidance and better prompts.
 
 ### How to run it on your own machine
 
@@ -17,3 +15,5 @@ A simple Streamlit app that shows how to build a chatbot using OpenAI's GPT-3.5.
    ```
    $ streamlit run streamlit_app.py
    ```
+
+3. Add your Groq API key in the app and start asking for workout advice.

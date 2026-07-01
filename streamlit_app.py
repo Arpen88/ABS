@@ -1,56 +1,64 @@
 import streamlit as st
-from openai import OpenAI
+from groq import Groq
 
-# Show title and description.
-st.title("💬 Chatbot")
+st.set_page_config(page_title="Workout Coach Chatbot", page_icon="💪", layout="centered")
+
+st.title("💪 Workout Coach Chatbot")
 st.write(
-    "This is a simple chatbot that uses OpenAI's GPT-3.5 model to generate responses. "
-    "To use this app, you need to provide an OpenAI API key, which you can get [here](https://platform.openai.com/account/api-keys). "
-    "You can also learn how to build this app step by step by [following our tutorial](https://docs.streamlit.io/develop/tutorials/llms/build-conversational-apps)."
+    "Ask for workout plans, form tips, recovery advice, or anything else fitness-related. "
+    "This chatbot is tuned to give practical, safe coaching-style guidance."
 )
+st.caption("Tip: include your goal, experience level, equipment, and any injuries for better advice.")
 
-# Ask user for their OpenAI API key via `st.text_input`.
-# Alternatively, you can store the API key in `./.streamlit/secrets.toml` and access it
-# via `st.secrets`, see https://docs.streamlit.io/develop/concepts/connections/secrets-management
-openai_api_key = st.text_input("OpenAI API Key", type="password")
-if not openai_api_key:
-    st.info("Please add your OpenAI API key to continue.", icon="🗝️")
+groq_api_key = st.text_input("Groq API Key", type="password")
+if not groq_api_key:
+    st.info("Please add your Groq API key to continue.", icon="🗝️")
 else:
+    client = Groq(api_key=groq_api_key)
 
-    # Create an OpenAI client.
-    client = OpenAI(api_key=openai_api_key)
-
-    # Create a session state variable to store the chat messages. This ensures that the
-    # messages persist across reruns.
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # Display the existing chat messages via `st.chat_message`.
+    if not st.session_state.messages:
+        welcome_message = (
+            "I’m your workout-focused coaching assistant. I can help with training plans, "
+            "exercise selection, form cues, recovery, nutrition basics, and habit-building. "
+            "Tell me your goals, experience level, equipment, and schedule and I’ll tailor the advice."
+        )
+        st.session_state.messages.append({"role": "assistant", "content": welcome_message})
+
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # Create a chat input field to allow the user to enter a message. This will display
-    # automatically at the bottom of the page.
-    if prompt := st.chat_input("What is up?"):
-
-        # Store and display the current prompt.
+    if prompt := st.chat_input("Ask me about workouts, recovery, or form..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        # Generate a response using the OpenAI API.
-        stream = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": m["role"], "content": m["content"]}
-                for m in st.session_state.messages
-            ],
-            stream=True,
+        system_prompt = (
+            "You are a highly knowledgeable fitness coach. Provide practical, evidence-informed advice "
+            "on workouts, strength training, cardio, mobility, recovery, nutrition basics, and habit building. "
+            "Be encouraging, specific, and safe. Ask clarifying questions when needed. If the user mentions pain, "
+            "injury, or a medical issue, encourage professional guidance and avoid diagnosing. Focus on actionable "
+            "steps, progressive overload, realistic expectations, and injury prevention."
         )
 
-        # Stream the response to the chat using `st.write_stream`, then store it in 
-        # session state.
+        messages = [{"role": "system", "content": system_prompt}]
+        messages.extend(
+            [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
+        )
+
+        try:
+            response = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=messages,
+                temperature=0.7,
+            )
+            assistant_reply = response.choices[0].message.content
+        except Exception as exc:
+            assistant_reply = f"Sorry, I couldn’t get a response from Groq: {exc}"
+
         with st.chat_message("assistant"):
-            response = st.write_stream(stream)
-        st.session_state.messages.append({"role": "assistant", "content": response})
+            st.markdown(assistant_reply)
+        st.session_state.messages.append({"role": "assistant", "content": assistant_reply})
